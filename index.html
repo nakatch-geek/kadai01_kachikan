@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>価値観探求ゲーム</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f7f6;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #333;
+        }
+        #game-container {
+            background-color: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 650px; 
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        h2 { 
+            color: #34495e;
+            margin-top: 0; 
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        #initial-results-container h2, 
+        #top-5-selection-container h2,
+        #ranking-container h2 { /* ステップ3のh2も共通スタイル */
+            margin-top: 0; 
+        }
+
+        #game-explanation { 
+            padding: 15px; 
+            margin-bottom: 25px; 
+            background-color: #e9ecef; 
+            border-radius: 8px;
+            text-align: left;
+            line-height: 1.6;
+            font-size: 0.95em;
+            color: #495057;
+        }
+        #game-explanation h2 { 
+             margin-bottom: 10px; 
+        }
+
+        #word-display-container {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #word-display {
+            font-size: clamp(1.7em, 4.5vw, 2.4em);
+            font-weight: bold;
+            color: #3498db;
+            line-height: 1.3;
+            margin-bottom: 8px;
+        }
+        #description-display {
+            font-size: clamp(0.8em, 2.3vw, 0.95em);
+            color: #555;
+            line-height: 1.4;
+            max-width: 95%;
+        }
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .buttons button {
+            font-size: clamp(0.8em, 2.2vw, 0.95em);
+            padding: 10px 12px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+            width: 100%;
+        }
+        .buttons button:hover { transform: translateY(-2px); }
+        .buttons button:active { transform: translateY(0px); }
+
+        #super-important-btn { background-color: #9b59b6; }
+        #super-important-btn:hover { background-color: #8e44ad; }
+        #important-btn { background-color: #2ecc71; }
+        #important-btn:hover { background-color: #27ae60; }
+        #neutral-btn { background-color: #f39c12; }
+        #neutral-btn:hover { background-color: #e67e22; }
+        #unimportant-btn { background-color: #e74c3c; }
+        #unimportant-btn:hover { background-color: #c0392b; }
+
+        #initial-results-container, #top-5-selection-container, #ranking-container, #final-results-container {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            text-align: left;
+        }
+        #initial-results-container h3, #final-results-container h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            font-size: 1.1em;
+        }
+        #initial-results-container ul {
+            list-style-type: none;
+            padding-left: 0;
+            max-height: 150px; 
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+        #initial-results-container li, #final-results-container li, .rank-item span { /* 順位付けアイテムのスタイル共通化 */
+            background-color: #e9efff;
+            padding: 8px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            color: #333;
+            font-size: 0.9em;
+        }
+        #final-results-container li { /* 最終結果のリストアイテムは少し強調 */
+            padding: 10px;
+            font-size: 0.95em;
+        }
+        #counter {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+        .action-button { /* 汎用的なアクションボタンのクラス名に変更 */
+            margin-top: 20px;
+            padding: 12px 25px;
+            font-size: 1em;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .action-button:hover { background-color: #2980b9; }
+        .action-button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        #top-5-selection-container label {
+            display: block;
+            margin-bottom: 8px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #top-5-selection-container label:hover {
+            background-color: #f0f0f0;
+        }
+        #top-5-selection-container input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        .selection-list, .ranking-list { /* 共通のリストスタイル */
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 10px; 
+        }
+        .rank-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .rank-item span {
+            flex-grow: 1;
+            margin-right: 15px;
+            text-align: left;
+            background-color: transparent; /* 親の背景を継承しないように */
+        }
+        .rank-item select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 0.9em;
+            min-width: 70px; /* ドロップダウンの最小幅 */
+        }
+        #error-message {
+            color: red;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .buttons { grid-template-columns: 1fr; }
+            #game-container { padding: 20px 15px; }
+            #word-display-container { padding: 15px 10px; min-height: 100px;}
+            h1 { font-size: 1.6em; }
+            h2 { font-size: 1.2em; } 
+            #game-explanation {
+                padding: 15px;
+                font-size: 0.9em;
+                margin-bottom: 20px;
+            }
+            #game-explanation h2 { 
+                font-size: 1.2em; 
+            }
+            .rank-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .rank-item select {
+                margin-top: 8px;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-explanation">
+            <h2>ゲームの進め方</h2>
+            <p>価値観を探るために、８０の言葉を提示しますので、内面から感じる価値観を４段階で選んでください。</p>
+            <p>次のステップで、特に重要な５つに絞り込み、最後にそれらに順位を付けます。</p>
+        </div>
+
+        <div id="game-step-1">
+            <h1>価値観探求ゲーム (ステップ1/3)</h1>
+            <div id="word-display-container">
+                <div id="word-display">ここに言葉が表示されます</div>
+                <div id="description-display">ここに説明が表示されます</div>
+            </div>
+            <div class="buttons">
+                <button id="super-important-btn">凄く大切</button>
+                <button id="important-btn">大切</button>
+                <button id="neutral-btn">どちらでもない</button>
+                <button id="unimportant-btn">あまり大切でない</button>
+            </div>
+            <div id="counter"></div>
+        </div>
+
+        <div id="game-step-2" style="display: none;">
+            <h1>価値観探求ゲーム (ステップ2/3)</h1>
+            <div id="initial-results-container">
+                <h2>ステップ1の評価結果</h2>
+                <h3>「凄く大切」だと感じた言葉：</h3>
+                <ul id="initial-super-important-list"></ul>
+                <h3>「大切」だと感じた言葉：</h3>
+                <ul id="initial-important-list"></ul>
+            </div>
+
+            <div id="top-5-selection-container">
+                <h2>上位5つの価値観を選択</h2>
+                <p>上記の中から、あなたにとって特に重要な価値観を5つ選んでください。(現在 <span id="selected-count">0</span>/5 個選択中)</p>
+                <div class="selection-list" id="candidate-list">
+                    </div>
+                <button id="to-step-3-button" class="action-button" disabled>順位付けへ進む</button>
+            </div>
+        </div>
+        
+        <div id="game-step-3" style="display: none;">
+            <h1>価値観探求ゲーム (ステップ3/3)</h1>
+            <div id="ranking-container">
+                <h2>上位5つの価値観を順位付け</h2>
+                <p>選ばれた5つの価値観に、1位から5位までの順位を付けてください。(順位が重複しないようにしてください)</p>
+                <div class="ranking-list" id="rank-selection-area">
+                    </div>
+                <div id="error-message" style="display:none;"></div>
+                <button id="rank-complete-button" class="action-button">順位を決定する</button>
+            </div>
+        </div>
+
+        <div id="final-results-container" style="display: none;">
+            <h1>最終結果</h1>
+            <h3>あなたが選んだ上位5つの価値観 (順位付き)：</h3>
+            <ul id="final-top-5-list"></ul>
+            <button id="reset-btn" class="action-button" style="background-color:#007bff;">もう一度プレイする</button>
+        </div>
+    </div>
+
+    <script>
+        const words = [
+            { word: "達成", description: "なにか重要なことを達成する" }, { word: "冒険", description: "新しくてワクワクする体験をする" },
+            { word: "変化", description: "変化に富んだバラエティ豊かな人生を送る" }, { word: "独立", description: "他者に依存しないで生きる" },
+            { word: "貞節", description: "パートナーにウソをつかず誠実に生きる" }, { word: "美的", description: "身のまわりの美しいものを味わう" },
+            { word: "創造", description: "新しくて斬新なアイデアを生む" }, { word: "愛慕", description: "誰かに愛をあたえる" },
+            { word: "受容", description: "ありのままの自分を受け入れてもらう" }, { word: "正確", description: "自分の意見や信念正しく伝える" },
+            { word: "魅力", description: "身体的な魅力を保つ" }, { word: "権威", description: "他者に対して責任を持って指導する" },
+            { word: "自治", description: "人まかせにしないで自分で決める" }, { word: "庇護", description: "他者のめんどうをみる" },
+            { word: "挑戦", description: "難しい仕事や問題に取り組む" }, { word: "快適", description: "喜びに満ちた快適な人生を送る" },
+            { word: "誓約", description: "絶対に破れない約束や誓いを結ぶ" }, { word: "慈愛", description: "他者を心配して助ける" },
+            { word: "貢献", description: "世界の役に立つことをする" }, { word: "協調", description: "他者と協力して何かをする" },
+            { word: "礼儀", description: "他者に対して誠実で礼儀正しく接する" }, { word: "信頼", description: "信用があって頼れる人間になる" },
+            { word: "義務", description: "自分の義務と責任を果たす" }, { word: "調和", description: "周囲の環境と調和しながら生きる" },
+            { word: "興奮", description: "スリルと刺激に満ちた人生を送る" }, { word: "名声", description: "有名になって存在を認められる" },
+            { word: "家族", description: "幸福で愛に満ちた家庭を作る" }, { word: "体力", description: "丈夫で強い身体を保つ" },
+            { word: "柔軟", description: "新たな環境にも簡単になじむ" }, { word: "許し", description: "他人を許しながら生きる" },
+            { word: "友情", description: "親密で助け合える友人を作る" }, { word: "愉楽", description: "遊んで楽しむこと" },
+            { word: "寛大", description: "自分の物を他人にあたえる" }, { word: "真実", description: "自分が正しいと思うとおりに行動する" },
+            { word: "信教", description: "自分を超えた存在の意思を考える" }, { word: "成長", description: "変化と成長を維持する" },
+            { word: "健康", description: "健やかで体調よく生きる" }, { word: "有益", description: "他人の役に立つこと" },
+            { word: "正直", description: "ウソをつかず正直に生きる" }, { word: "希望", description: "ポジティブで楽観的に生きる" },
+            { word: "謙遜", description: "地味で控えめに生きる" }, { word: "笑い", description: "人生や世界のユーモラスな側面を見る" },
+            { word: "勤勉", description: "自分の仕事に一生懸命取り組む" }, { word: "平安", description: "自分の内面の平和を維持する" },
+            { word: "親密", description: "プライベートな体験を他人とシェアする" }, { word: "正義", description: "すべての人を公平に扱う" },
+            { word: "知識", description: "価値ある知識を学ぶ、または生み出す" }, { word: "余暇", description: "自分の時間をリラックスして楽しむ" },
+            { word: "寵愛", description: "親しい人から愛される" }, { word: "熟達", description: "いつもの仕事・作業に習熟する" },
+            { word: "現在", description: "いまの瞬間に集中して生きる" }, { word: "適度", description: "過剰を避けてほどよいところを探す" },
+            { word: "単婚", description: "唯一の愛し合える相手を見つける" }, { word: "反抗", description: "権威やルールに疑問を持って挑む" },
+            { word: "配慮", description: "他人を心づかって世話すること" }, { word: "開放", description: "新たな体験、発想、選択肢に心を開く" },
+            { word: "秩序", description: "整理されて秩序のある人生を送る" }, { word: "情熱", description: "なんらかの発想、活動、人々に深い感情を抱く" },
+            { word: "快楽", description: "良い気分になること" }, { word: "人気", description: "多くの人に好かれる" },
+            { word: "権力", description: "他人をコントロールする" }, { word: "目的", description: "人生の意味を方向性を定める" },
+            { word: "合理", description: "理性と論理に従う" }, { word: "現実", description: "現実的、実践的にふるまう" },
+            { word: "責任", description: "責任をもって行動する" }, { word: "危険", description: "リスクを取ってチャンスを手に入れる" },
+            { word: "恋愛", description: "興奮して燃えるような恋をする" }, { word: "安全", description: "安心感を得る" },
+            { word: "受諾", description: "ありのままの自分を受け入れる" }, { word: "自制", description: "自分の行動を自分でコントロールする" },
+            { word: "自尊", description: "自分に自信を持つ" }, { word: "自知", description: "自分について深い理解を持つ" },
+            { word: "献身", description: "誰かに奉仕する" }, { word: "性愛", description: "活動的で満足のいく性生活を送る" },
+            { word: "単純", description: "シンプルでミニマルな暮らしをする" }, { word: "孤独", description: "他人から離れて１人でいられる時間と空間を持つ" },
+            { word: "精神", description: "精神的に成長し成熟する" }, { word: "安定", description: "いつも一定して変化のない人生を送る" },
+            { word: "寛容", description: "自分と違う存在を尊重して受け入れる" }, { word: "伝統", description: "過去から受け継がれてきたパターンを尊重する" }
+        ];
+
+        let availableWords = []; 
+        let currentWordData = null; 
+        let superImportantWords = []; 
+        let importantWords = []; 
+        let selectedTop5Candidates = []; // ステップ2で選ばれた5つの言葉を保持
+        let wordCount = 0; 
+        const maxWords = words.length; 
+
+        // DOM Elements
+        const gameStep1Div = document.getElementById('game-step-1');
+        const gameStep2Div = document.getElementById('game-step-2');
+        const gameStep3Div = document.getElementById('game-step-3'); // ステップ3のDIV
+        const finalResultsDiv = document.getElementById('final-results-container');
+
+        const wordDisplay = document.getElementById('word-display');
+        const descriptionDisplay = document.getElementById('description-display');
+        const counterDisplay = document.getElementById('counter');
+
+        const superImportantBtn = document.getElementById('super-important-btn');
+        const importantBtn = document.getElementById('important-btn');
+        const neutralBtn = document.getElementById('neutral-btn');
+        const unimportantBtn = document.getElementById('unimportant-btn');
+
+        const initialSuperImportantList = document.getElementById('initial-super-important-list');
+        const initialImportantList = document.getElementById('initial-important-list');
+        
+        const candidateListDiv = document.getElementById('candidate-list');
+        const selectedCountSpan = document.getElementById('selected-count');
+        const toStep3Button = document.getElementById('to-step-3-button'); // ステップ2のボタンID変更
+        
+        const rankSelectionArea = document.getElementById('rank-selection-area'); // ステップ3の順位付けエリア
+        const rankCompleteButton = document.getElementById('rank-complete-button'); // ステップ3の決定ボタン
+        const errorMessageDiv = document.getElementById('error-message');
+        
+        const finalTop5List = document.getElementById('final-top-5-list');
+        const resetBtn = document.getElementById('reset-btn');
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; 
+            }
+        }
+
+        function getRandomWord() {
+            if (availableWords.length === 0) return null;
+            return availableWords.pop(); 
+        }
+
+        function displayWord() {
+            currentWordData = getRandomWord(); 
+            if (currentWordData) {
+                wordDisplay.textContent = currentWordData.word;
+                descriptionDisplay.textContent = currentWordData.description;
+                wordCount++; 
+                counterDisplay.textContent = `${wordCount} / ${maxWords} 問目`; 
+            } else {
+                gameStep1Div.style.display = 'none';
+                showInitialResultsAndPrepareStep2();
+                gameStep2Div.style.display = 'block';
+            }
+        }
+
+        function handleReaction(reactionType) {
+            if (!currentWordData) return; 
+
+            if (reactionType === 'super-important') {
+                superImportantWords.push(currentWordData);
+            } else if (reactionType === 'important') {
+                importantWords.push(currentWordData);
+            }
+            displayWord(); 
+        }
+
+        function showInitialResultsAndPrepareStep2() {
+            initialSuperImportantList.innerHTML = superImportantWords.map(item => `<li>${item.word} (${item.description})</li>`).join('');
+            initialImportantList.innerHTML = importantWords.map(item => `<li>${item.word} (${item.description})</li>`).join('');
+
+            const candidates = [...superImportantWords, ...importantWords];
+            candidateListDiv.innerHTML = ''; 
+
+            if (candidates.length === 0) {
+                candidateListDiv.innerHTML = '<p>「凄く大切」または「大切」と評価した言葉がありませんでした。リセットしてもう一度お試しください。</p>';
+                toStep3Button.disabled = true;
+                toStep3Button.textContent = "選択対象なし";
+                return;
+            }
+            
+            // 候補が5つ未満の場合、ステップ3(順位付け)はスキップし、それらを最終結果とする
+             if (candidates.length < 5) {
+                candidateListDiv.innerHTML = `<p>「凄く大切」または「大切」と評価した言葉が${candidates.length}つでした（5つ未満）。これらがあなたの上位の価値観となります。</p>`;
+                finalTop5List.innerHTML = ''; // 念のためクリア
+                candidates.forEach((item, index) => {
+                     const listItem = document.createElement('li');
+                     listItem.textContent = `${index + 1}位: ${item.word} (${item.description})`; // 仮の順位
+                     finalTop5List.appendChild(listItem);
+                });
+                toStep3Button.textContent = "結果を見る";
+                toStep3Button.disabled = false;
+                toStep3Button.onclick = () => { 
+                    gameStep2Div.style.display = 'none';
+                    finalResultsDiv.style.display = 'block';
+                };
+                return; 
+            }
+
+
+            candidates.forEach((item, index) => {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = index; 
+                checkbox.dataset.word = item.word; 
+                checkbox.dataset.description = item.description;
+                
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(` ${item.word} (${item.description})`));
+                candidateListDiv.appendChild(label);
+            });
+
+            updateSelectedCount(); 
+        }
+        
+        function updateSelectedCount() {
+            const checkedCheckboxes = candidateListDiv.querySelectorAll('input[type="checkbox"]:checked');
+            selectedCountSpan.textContent = checkedCheckboxes.length; 
+            toStep3Button.disabled = checkedCheckboxes.length !== 5; 
+        }
+
+        candidateListDiv.addEventListener('change', updateSelectedCount);
+
+        toStep3Button.addEventListener('click', () => {
+            const checkedCheckboxes = candidateListDiv.querySelectorAll('input[type="checkbox"]:checked');
+            if (checkedCheckboxes.length === 5) {
+                selectedTop5Candidates = []; // 初期化
+                checkedCheckboxes.forEach(checkbox => {
+                    selectedTop5Candidates.push({
+                        word: checkbox.dataset.word,
+                        description: checkbox.dataset.description
+                    });
+                });
+                gameStep2Div.style.display = 'none';
+                prepareStep3();
+                gameStep3Div.style.display = 'block';
+            }
+        });
+
+        function prepareStep3() {
+            rankSelectionArea.innerHTML = ''; // クリア
+            errorMessageDiv.style.display = 'none'; // エラーメッセージを隠す
+            selectedTop5Candidates.forEach((item, index) => {
+                const rankItemDiv = document.createElement('div');
+                rankItemDiv.classList.add('rank-item');
+
+                const itemText = document.createElement('span');
+                itemText.textContent = `${item.word} (${item.description})`;
+                
+                const selectRank = document.createElement('select');
+                selectRank.dataset.itemIndex = index; // 元のアイテムのインデックスを保持
+                const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.textContent = "順位を選択";
+                selectRank.appendChild(defaultOption);
+
+                for (let i = 1; i <= 5; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `${i}位`;
+                    selectRank.appendChild(option);
+                }
+                rankItemDiv.appendChild(itemText);
+                rankItemDiv.appendChild(selectRank);
+                rankSelectionArea.appendChild(rankItemDiv);
+            });
+        }
+
+        rankCompleteButton.addEventListener('click', () => {
+            const ranks = [];
+            const rankedItems = [];
+            let isValid = true;
+            errorMessageDiv.style.display = 'none';
+            errorMessageDiv.textContent = '';
+
+            const selectElements = rankSelectionArea.querySelectorAll('select');
+            selectElements.forEach(select => {
+                const rank = select.value;
+                const itemIndex = parseInt(select.dataset.itemIndex, 10);
+                const originalItem = selectedTop5Candidates[itemIndex];
+
+                if (!rank) {
+                    isValid = false;
+                }
+                if (ranks.includes(rank) && rank !== "") { // 空でない順位の重複をチェック
+                    isValid = false;
+                }
+                ranks.push(rank);
+                rankedItems.push({
+                    word: originalItem.word,
+                    description: originalItem.description,
+                    rank: rank ? parseInt(rank, 10) : null // rankが空ならnull
+                });
+            });
+
+            if (!isValid || ranks.some(r => !r) || new Set(ranks.filter(r => r)).size !== 5) {
+                 errorMessageDiv.textContent = 'すべての項目にユニークな順位（1位～5位）を選択してください。';
+                 errorMessageDiv.style.display = 'block';
+                return;
+            }
+            
+            // 順位でソート
+            rankedItems.sort((a, b) => a.rank - b.rank);
+
+            finalTop5List.innerHTML = ''; // クリア
+            rankedItems.forEach(item => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${item.rank}位: ${item.word} (${item.description})`;
+                finalTop5List.appendChild(listItem);
+            });
+            gameStep3Div.style.display = 'none';
+            finalResultsDiv.style.display = 'block';
+        });
+        
+        function startGame() {
+            availableWords = [...words]; 
+            shuffleArray(availableWords); 
+            currentWordData = null;
+            superImportantWords = [];
+            importantWords = [];
+            selectedTop5Candidates = [];
+            wordCount = 0;
+
+            gameStep1Div.style.display = 'block';
+            gameStep2Div.style.display = 'none';
+            gameStep3Div.style.display = 'none';
+            finalResultsDiv.style.display = 'none';
+            
+            initialSuperImportantList.innerHTML = '';
+            initialImportantList.innerHTML = '';
+            candidateListDiv.innerHTML = '';
+            rankSelectionArea.innerHTML = '';
+            finalTop5List.innerHTML = '';
+            selectedCountSpan.textContent = '0';
+            toStep3Button.disabled = true;
+            toStep3Button.textContent = "順位付けへ進む";
+            errorMessageDiv.style.display = 'none';
+            
+            // toStep3Buttonのonclickイベントをデフォルトに戻す
+            toStep3Button.onclick = () => {
+                const checkedCheckboxes = candidateListDiv.querySelectorAll('input[type="checkbox"]:checked');
+                if (checkedCheckboxes.length === 5) {
+                    selectedTop5Candidates = []; 
+                    checkedCheckboxes.forEach(checkbox => {
+                        selectedTop5Candidates.push({
+                            word: checkbox.dataset.word,
+                            description: checkbox.dataset.description
+                        });
+                    });
+                    gameStep2Div.style.display = 'none';
+                    prepareStep3();
+                    gameStep3Div.style.display = 'block';
+                }
+            };
+
+
+            displayWord(); 
+        }
+
+        superImportantBtn.addEventListener('click', () => handleReaction('super-important'));
+        importantBtn.addEventListener('click', () => handleReaction('important'));
+        neutralBtn.addEventListener('click', () => handleReaction('neutral'));
+        unimportantBtn.addEventListener('click', () => handleReaction('unimportant'));
+        resetBtn.addEventListener('click', startGame);
+
+        startGame();
+    </script>
+</body>
+</html>
